@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     CORS_ORIGINS: str = "http://localhost:5173"
 
     # --- Public redirect base (used to build NFC URLs returned by the API) ---
-    PUBLIC_BASE_URL: str = "http://localhost:8000"
+    BASE_URL: str = "http://localhost:5173"
 
     # --- Rate limiting (public redirect endpoint) ---
     REDIRECT_RATE_LIMIT: str = "30/minute"
