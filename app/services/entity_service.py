@@ -42,7 +42,7 @@ def generate_unique_slug(db: Session) -> str:
 
 
 def build_nfc_url(slug: str) -> str:
-    base = settings.PUBLIC_BASE_URL.rstrip("/")
+    base = settings.BASE_URL.rstrip("/")
     return f"{base}/r/{slug}"
 
 
