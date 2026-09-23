@@ -7,8 +7,8 @@ table can log into the admin panel.
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Boolean, DateTime, String , ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column , relationship
 
 from app.core.database import Base
 from app.core.types import GUID
@@ -24,6 +24,19 @@ class User(Base):
     is_superuser: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+    )
+    entity_id: Mapped[uuid.UUID | None] = mapped_column(
+        GUID,
+        ForeignKey(
+            "entities.id",
+            ondelete="SET NULL",
+        ),
+        nullable=True,
+        index=True,
+    )
+    entity = relationship(
+        "Entity",
+        backref="users",
     )
 
     def __repr__(self) -> str:  # pragma: no cover
