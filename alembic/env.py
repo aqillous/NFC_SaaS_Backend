@@ -18,6 +18,7 @@ from app.models import user  # noqa: F401
 from app.models import entity # noqa: F401
 from app.models import subscription  # noqa: F401
 from app.models import redirect_log  # noqa: F401
+from app.models import feedback  # noqa: F401
 
 # this is the Alembic Config object, which provides access to values within .ini file
 config = context.config

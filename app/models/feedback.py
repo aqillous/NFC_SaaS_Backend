@@ -11,6 +11,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    JSON,
     String,
     Text,
 )
@@ -58,6 +59,12 @@ class Feedback(Base):
     comment: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
+    )
+
+    reasons: Mapped[list[str]] = mapped_column(
+        JSON,
+        nullable=False,
+        default=list,
     )
 
     redirected_to_google: Mapped[bool] = mapped_column(

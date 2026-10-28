@@ -10,6 +10,12 @@ from pydantic import (
     field_validator,
 )
 
+FEEDBACK_REASONS = {
+    "service_speed",
+    "staff_attitude",
+    "product_quality",
+}
+
 
 class FeedbackSubmit(BaseModel):
     quality: int = Field(
@@ -35,6 +41,13 @@ class FeedbackSubmit(BaseModel):
         max_length=2000,
     )
 
+    reasons: list[str] = Field(
+        default_factory=list,
+        max_length=3,
+    )
+
+    redirected_to_google: bool = False
+
     @field_validator("comment")
     @classmethod
     def clean_comment(
@@ -48,6 +61,16 @@ class FeedbackSubmit(BaseModel):
         value = value.strip()
 
         return value or None
+
+    @field_validator("reasons")
+    @classmethod
+    def validate_reasons(cls, value: list[str]) -> list[str]:
+        if (
+            len(set(value)) != len(value)
+            or not set(value).issubset(FEEDBACK_REASONS)
+        ):
+            raise ValueError("Invalid feedback reasons")
+        return value
 
 
 class FeedbackOut(BaseModel):
@@ -65,6 +88,8 @@ class FeedbackOut(BaseModel):
     overall_score: float
 
     comment: Optional[str]
+
+    reasons: list[str] = Field(default_factory=list)
 
     redirected_to_google: bool
 

@@ -157,6 +157,10 @@ def submit_feedback(
 
         comment=payload.comment,
 
+        reasons=payload.reasons,
+
+        redirected_to_google=payload.redirected_to_google,
+
         user_agent=
             request.headers.get(
                 "user-agent"
@@ -192,6 +196,12 @@ def submit_feedback(
 
                 "comment":
                     feedback.comment,
+
+                "reasons":
+                    feedback.reasons,
+
+                "redirected_to_google":
+                    feedback.redirected_to_google,
 
                 "created_at":
                     feedback.created_at.isoformat(),

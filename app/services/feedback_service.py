@@ -31,10 +31,6 @@ from app.schemas.feedback import (
 )
 
 
-# Customer needs MORE than 4.0 to be redirected.
-GOOGLE_REDIRECT_THRESHOLD = 4.0
-
-
 def calculate_overall_score(
     quality: int,
     service: int,
@@ -56,16 +52,14 @@ def create_feedback(
     comment: Optional[str],
     user_agent: Optional[str],
     ip_address: Optional[str],
+    reasons: list[str],
+    redirected_to_google: bool,
 ) -> tuple[FeedbackOut, bool]:
 
     overall = calculate_overall_score(
         quality,
         service,
         taste,
-    )
-
-    should_redirect = (
-        overall > GOOGLE_REDIRECT_THRESHOLD
     )
 
     feedback = Feedback(
@@ -79,7 +73,9 @@ def create_feedback(
 
         comment=comment,
 
-        redirected_to_google=should_redirect,
+        reasons=reasons,
+
+        redirected_to_google=redirected_to_google,
 
         user_agent=(
             user_agent[:500]
@@ -100,7 +96,7 @@ def create_feedback(
 
     db.refresh(feedback)
 
-    return FeedbackOut.model_validate(feedback), should_redirect
+    return FeedbackOut.model_validate(feedback), redirected_to_google
 
 
 def _empty_stats() -> FeedbackStats:
