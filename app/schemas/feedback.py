@@ -46,8 +46,6 @@ class FeedbackSubmit(BaseModel):
         max_length=3,
     )
 
-    redirected_to_google: bool = False
-
     @field_validator("comment")
     @classmethod
     def clean_comment(

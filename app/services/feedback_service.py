@@ -22,6 +22,7 @@ from sqlalchemy.orm import Session
 
 from app.models.entity import Entity
 from app.models.feedback import Feedback
+from app.models.redirect_log import RedirectLog
 
 from app.schemas.feedback import (
     DailyFeedbackStat,
@@ -53,7 +54,6 @@ def create_feedback(
     user_agent: Optional[str],
     ip_address: Optional[str],
     reasons: list[str],
-    redirected_to_google: bool,
 ) -> tuple[FeedbackOut, bool]:
 
     overall = calculate_overall_score(
@@ -75,7 +75,7 @@ def create_feedback(
 
         reasons=reasons,
 
-        redirected_to_google=redirected_to_google,
+        redirected_to_google=False,
 
         user_agent=(
             user_agent[:500]
@@ -96,28 +96,7 @@ def create_feedback(
 
     db.refresh(feedback)
 
-    return FeedbackOut.model_validate(feedback), redirected_to_google
-
-
-def _empty_stats() -> FeedbackStats:
-
-    return FeedbackStats(
-        total_submissions=0,
-
-        average_score=0,
-
-        average_quality=0,
-        average_service=0,
-        average_taste=0,
-
-        google_redirects=0,
-        internal_feedback=0,
-
-        google_redirect_rate=0,
-
-        submissions_today=0,
-        submissions_this_month=0,
-    )
+    return FeedbackOut.model_validate(feedback), False
 
 
 def get_stats(
@@ -195,16 +174,16 @@ def get_stats(
         )
     ).one()
 
-    total = int(
-        row.total or 0
-    )
-
-    redirects = int(
-        row.redirects or 0
-    )
-
-    if total == 0:
-        return _empty_stats()
+    total = int(row.total or 0)
+    feedback_redirects = int(row.redirects or 0)
+    logged_redirects = db.scalar(
+        select(func.count())
+        .select_from(RedirectLog)
+        .where(RedirectLog.entity_id == entity_id)
+    ) or 0
+    redirects = feedback_redirects + int(logged_redirects)
+    internal_feedback = total - feedback_redirects
+    total_review_choices = redirects + internal_feedback
 
     return FeedbackStats(
         total_submissions=total,
@@ -231,12 +210,12 @@ def get_stats(
 
         google_redirects=redirects,
 
-        internal_feedback=(
-            total - redirects
-        ),
+        internal_feedback=internal_feedback,
 
         google_redirect_rate=round(
-            (redirects / total) * 100,
+            (redirects / total_review_choices) * 100
+            if total_review_choices
+            else 0,
             2,
         ),
 
@@ -313,28 +292,44 @@ def get_dashboard(
         )
     ).all()
 
-    daily = [
-        DailyFeedbackStat(
+    daily_by_date = {
+        str(row.day): DailyFeedbackStat(
             date=str(row.day),
-
-            submissions=int(
-                row.submissions
-            ),
-
-            average_score=round(
-                float(
-                    row.average_score or 0
-                ),
-                2,
-            ),
-
-            google_redirects=int(
-                row.google_redirects or 0
-            ),
+            submissions=int(row.submissions),
+            average_score=round(float(row.average_score or 0), 2),
+            google_redirects=int(row.google_redirects or 0),
         )
-
         for row in daily_rows
-    ]
+    }
+
+    redirect_rows = db.execute(
+        select(
+            func.date(RedirectLog.created_at).label("day"),
+            func.count(RedirectLog.id).label("redirects"),
+        )
+        .where(
+            RedirectLog.entity_id == entity.id,
+            RedirectLog.created_at >= start,
+        )
+        .group_by(func.date(RedirectLog.created_at))
+    ).all()
+
+    for row in redirect_rows:
+        day = str(row.day)
+        if day in daily_by_date:
+            daily_by_date[day].google_redirects += int(row.redirects or 0)
+        else:
+            daily_by_date[day] = DailyFeedbackStat(
+                date=day,
+                submissions=0,
+                average_score=0,
+                google_redirects=int(row.redirects or 0),
+            )
+
+    daily = sorted(
+        daily_by_date.values(),
+        key=lambda item: item.date,
+    )
 
     return RestaurantDashboard(
         entity_id=entity.id,

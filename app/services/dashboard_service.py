@@ -115,6 +115,24 @@ def get_dashboard_stats(db: Session) -> DashboardStats:
         )
     ) or 0
 
+    scans_today += db.scalar(
+        select(func.count())
+        .select_from(Feedback)
+        .where(
+            Feedback.redirected_to_google.is_(True),
+            Feedback.created_at >= today_start,
+        )
+    ) or 0
+
+    scans_this_month += db.scalar(
+        select(func.count())
+        .select_from(Feedback)
+        .where(
+            Feedback.redirected_to_google.is_(True),
+            Feedback.created_at >= month_start,
+        )
+    ) or 0
+
     # ---------------------------------------------------------
     # FEEDBACK
     # ---------------------------------------------------------
@@ -140,7 +158,7 @@ def get_dashboard_stats(db: Session) -> DashboardStats:
         select(func.avg(Feedback.taste))
     ) or 0
 
-    google_redirects = db.scalar(
+    feedback_google_redirects = db.scalar(
         select(func.count())
         .select_from(Feedback)
         .where(
@@ -148,13 +166,24 @@ def get_dashboard_stats(db: Session) -> DashboardStats:
         )
     ) or 0
 
-    internal_feedback = (
-        total_feedback - google_redirects
+    logged_google_redirects = db.scalar(
+        select(func.count())
+        .select_from(RedirectLog)
+    ) or 0
+
+    google_redirects = (
+        feedback_google_redirects
+        + logged_google_redirects
     )
 
+    internal_feedback = (
+        total_feedback - feedback_google_redirects
+    )
+
+    total_review_choices = google_redirects + internal_feedback
     google_redirect_rate = (
-        (google_redirects / total_feedback) * 100
-        if total_feedback > 0
+        (google_redirects / total_review_choices) * 100
+        if total_review_choices > 0
         else 0
     )
 

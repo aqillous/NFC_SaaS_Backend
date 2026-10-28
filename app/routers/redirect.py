@@ -7,13 +7,15 @@ GET:
 Returns the information required by the frontend
 to display the review/rating page.
 
+GET:
+    /r/{slug}/google
+
+Logs a Google review link open and redirects to the configured URL.
+
 POST:
     /r/{slug}/feedback
 
 Saves the customer's feedback and returns JSON.
-
-The backend does NOT redirect the customer.
-The frontend controls the next step.
 """
 
 from fastapi import (
@@ -24,7 +26,7 @@ from fastapi import (
     status,
 )
 
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 
 from sqlalchemy.orm import Session
 
@@ -37,6 +39,7 @@ from app.schemas.feedback import FeedbackSubmit
 from app.services.redirect_service import (
     evaluate_redirect,
     RedirectOutcome,
+    log_redirect,
 )
 
 from app.services.feedback_service import (
@@ -101,6 +104,44 @@ def get_nfc_page(
     }
 
 
+@router.get(
+    "/r/{slug}/google",
+)
+@limiter.limit(
+    settings.REDIRECT_RATE_LIMIT
+)
+def redirect_to_google(
+    slug: str,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    result = evaluate_redirect(db, slug)
+
+    if result.outcome == RedirectOutcome.NOT_FOUND:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Not found",
+        )
+
+    if result.outcome == RedirectOutcome.UNAVAILABLE:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This NFC link is currently unavailable",
+        )
+
+    log_redirect(
+        db=db,
+        entity_id=result.entity.id,
+        user_agent=request.headers.get("user-agent"),
+        ip_address=request.client.host if request.client else None,
+    )
+
+    return RedirectResponse(
+        url=result.google_review_url,
+        status_code=status.HTTP_302_FOUND,
+    )
+
+
 @router.post(
     "/r/{slug}/feedback",
 )
@@ -158,8 +199,6 @@ def submit_feedback(
         comment=payload.comment,
 
         reasons=payload.reasons,
-
-        redirected_to_google=payload.redirected_to_google,
 
         user_agent=
             request.headers.get(
