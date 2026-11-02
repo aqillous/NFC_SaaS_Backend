@@ -12,6 +12,7 @@ from app.routers import entities as entities_router
 from app.routers import redirect as redirect_router
 from app.routers import subscriptions as subscriptions_router
 from app.routers import restaurant_dashboard as restaurant_dashboard_router
+from app.routers import users as users_router
 
 
 app = FastAPI(
@@ -64,6 +65,10 @@ app.include_router(
 
 app.include_router(
     restaurant_dashboard_router.router
+)
+
+app.include_router(
+    users_router.router
 )
 
 

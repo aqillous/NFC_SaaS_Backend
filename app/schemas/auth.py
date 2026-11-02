@@ -59,6 +59,17 @@ class UserAdminOut(BaseModel):
     entity_name: str | None = None
 
 
+class UserAdminCreate(BaseModel):
+    email: EmailStr
+    password: str = Field(
+        ...,
+        min_length=8,
+        max_length=128,
+    )
+    entity_id: uuid.UUID | None = None
+    is_superuser: bool = False
+
+
 class PasswordReset(BaseModel):
     password: str = Field(
         ...,
