@@ -30,7 +30,12 @@ class Settings(BaseSettings):
 
     # --- CORS ---
     # Comma-separated list of allowed origins, e.g. "http://localhost:5173,https://admin.mydomain.com"
-    CORS_ORIGINS: str = "http://localhost:5173"
+    CORS_ORIGINS: str = (
+        "http://localhost:5173,"
+        "http://127.0.0.1:5173,"
+        "http://localhost:5177,"
+        "http://127.0.0.1:5177"
+    )
 
     # --- Public redirect base (used to build NFC URLs returned by the API) ---
     BASE_URL: str = "http://localhost:5173"
