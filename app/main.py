@@ -37,6 +37,7 @@ app.add_exception_handler(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
+    allow_origin_regex=r"https://([a-zA-Z0-9-]+\.)*vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -70,6 +71,15 @@ app.include_router(
 app.include_router(
     users_router.router
 )
+
+
+@app.get("/", include_in_schema=False)
+def root() -> dict:
+    return {
+        "name": settings.APP_NAME,
+        "status": "ok",
+        "docs": "/docs",
+    }
 
 
 @app.get(
